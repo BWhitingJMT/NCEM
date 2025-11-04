@@ -186,7 +186,6 @@
           origin_county: (x.origin_county || '').trim(),
           sharepoint_folder: (x.sharepoint_folder || '').trim()
         }));
-        // Pre-filter if a county is already selected
         if (countySel.value) {
           const c = normalize(countySel.value);
           countyRows = allRows.filter(r => normalize(r.origin_county) === c);
@@ -200,3 +199,4 @@
   </script>
 </body>
 </html>
+
