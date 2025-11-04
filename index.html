@@ -10,11 +10,11 @@
     fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #fff; }
     legend { font-weight: 600; color:#333; }
     label { display:block; margin: 8px 0 4px; font-weight: 500; }
-    select, input[type="text"], input[type="email"], input[type="file"] { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; }
+    select, input[type="text"], input[type="email"], input[type="file"] { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; background:#fff; }
     .row { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-    .actions { margin-top: 16px; }
+    .actions { margin-top: 16px; display:flex; align-items:center; gap:12px; }
     button { padding:10px 16px; border:0; border-radius:6px; background:#005a9e; color:#fff; font-weight:600; cursor:pointer; }
-    button:disabled { background:#bbb; cursor:not-allowed; }
+    button[disabled] { background:#8aa7c4; cursor:not-allowed; }
     .note { font-size:0.9rem; color:#555; margin-top:6px; }
     .typeahead { position:relative; }
     .typeahead-list {
@@ -25,6 +25,14 @@
     }
     .typeahead-item { padding:8px 10px; cursor:pointer; }
     .typeahead-item:hover { background:#f2f6fb; }
+    .status { font-size:0.95rem; color:#333; }
+    .spinner {
+      width:16px; height:16px; border-radius:50%;
+      border:2px solid #fff; border-top-color: transparent;
+      display:inline-block; vertical-align:middle;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width:700px){ .row { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -32,7 +40,7 @@
   <h1>NCEM Design Submittal</h1>
   <p class="note">Anyone can submit. Files are sent securely with your submission.</p>
 
-  <form id="ncemForm" action="__PASTE_YOUR_FLOW_URL_HERE__" method="POST" enctype="multipart/form-data">
+  <form id="ncemForm" action="#" method="POST" enctype="multipart/form-data">
     <fieldset>
       <legend>Project Details</legend>
 
@@ -61,6 +69,22 @@
           <input id="email" name="email" type="email" placeholder="name@company.com" required />
         </div>
       </div>
+
+      <label for="design_team">Select the design team you are submitting on behalf of</label>
+      <select id="design_team" name="design_team" required>
+        <option value="">Select your answer</option>
+        <option>Arcadis</option>
+        <option>GFT</option>
+        <option>HDR</option>
+        <option>HNTB</option>
+        <option>KCI</option>
+        <option>KCA</option>
+        <option>Kimley-Horn</option>
+        <option>STV</option>
+        <option>Summit</option>
+        <option>Stantec</option>
+        <option>Volkert</option>
+      </select>
 
       <label for="siteid">Site ID + Address</label>
       <input id="siteid" name="siteid" type="text" placeholder="011-01-ec461 100 Windago Rd, Weaverville, NC" required />
@@ -92,8 +116,11 @@
     </fieldset>
 
     <div class="actions">
-      <button type="submit">Submit</button>
+      <button id="submitBtn" type="submit">Submit</button>
+      <span id="statusText" class="status" aria-live="polite"></span>
     </div>
+
+    <input type="hidden" id="meta" name="meta" />
   </form>
 
   <script>
@@ -125,9 +152,8 @@
     });
 
     const LOOKUP_URL = './site-lookup.json';
-
-    const countySel = document.getElementById('county');
-    const siteInput = document.getElementById('siteid');
+    const countySel  = document.getElementById('county');
+    const siteInput  = document.getElementById('siteid');
 
     const taWrap = document.createElement('div');
     taWrap.className = 'typeahead';
@@ -139,10 +165,10 @@
     listEl.style.display = 'none';
     taWrap.appendChild(listEl);
 
-    let allRows = [];  
-    let countyRows = []; 
+    let allRows = [];
+    let countyRows = [];
 
-    function normalize(s) { return (s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+    const normalize = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
     function renderSuggestions(items) {
       listEl.innerHTML = '';
@@ -167,8 +193,8 @@
     function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 
     countySel.addEventListener('change', () => {
-      const county = normalize(countySel.value);
       listEl.style.display = 'none';
+      const county = normalize(countySel.value);
       countyRows = allRows.filter(r => normalize(r.origin_county) === county);
       siteInput.value = '';
     });
@@ -196,7 +222,57 @@
       }
     }
     loadLookup();
+
+    const FLOW_URL = '<<PASTE_YOUR_FLOW_HTTP_TRIGGER_URL_HERE>>';
+    const form      = document.getElementById('ncemForm');
+    const statusEl  = document.getElementById('statusText');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function setSubmitting(on) {
+      if (on) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Submitting…';
+        statusEl.textContent = 'Uploading files and sending your submission…';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+        statusEl.textContent = '';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setSubmitting(true);
+
+      try {
+        const meta = {
+          county:     document.getElementById('county').value,
+          email:      document.getElementById('email').value,
+          siteid:     document.getElementById('siteid').value,
+          phase:      document.getElementById('phase').value,
+          subphase:   document.getElementById('subphase').value,
+          designTeam: document.getElementById('design_team').value
+        };
+        document.getElementById('meta').value = JSON.stringify(meta);
+
+        const fd = new FormData(form);
+        const resp = await fetch(FLOW_URL, { method: 'POST', body: fd });
+
+        if (!resp.ok) {
+          const text = await resp.text().catch(()=> '');
+          throw new Error(text || 'Submission failed.');
+        }
+
+        alert('Submitted! You should receive a confirmation email shortly.');
+        form.reset();
+        countyRows = [];
+      } catch (err) {
+        console.error(err);
+        alert('There was a problem submitting the form. Please try again or contact support.');
+      } finally {
+        setSubmitting(false);
+      }
+    });
   </script>
 </body>
 </html>
-
