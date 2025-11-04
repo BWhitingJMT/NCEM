@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NCEM Design Submittal</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; background: #f9fafb; }
+    h1 { color:#003366; border-bottom: 2px solid #005a9e; padding-bottom: 8px; }
+    fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #fff; }
+    legend { font-weight: 600; color:#333; }
+    label { display:block; margin: 8px 0 4px; font-weight: 500; }
+    select, input[type="text"], input[type="email"], input[type="file"] { width: 100%; padding: 8px; border:1px solid #ccc; border-radius:4px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .actions { margin-top: 16px; }
+    button { padding: 10px 16px; border: 0; border-radius: 6px; background:#005a9e; color: #fff; font-weight:600; cursor: pointer; }
+    button:disabled { background:#bbb; cursor:not-allowed; }
+    .note { font-size: 0.9rem; color:#555; margin-top:6px; }
+    .typeahead { position: relative; }
+    .typeahead-list {
+      position: absolute; left: 0; right: 0; z-index: 10;
+      background: #fff; border: 1px solid #ddd; border-radius: 6px;
+      max-height: 240px; overflow: auto; margin-top: 4px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .typeahead-item { padding: 8px 10px; cursor: pointer; }
+    .typeahead-item:hover { background: #f2f6fb; }
+  </style>
+</head>
+
+<body>
+  <h1>NCEM Design Submittal</h1>
+  <p class="note">This form can be completed by anyone. Files will be uploaded directly with your submission.</p>
+
+  <form id="ncemForm" action="__PASTE_YOUR_FLOW_URL_HERE__" method="POST" enctype="multipart/form-data">
+    <fieldset>
+      <legend>Project Details</legend>
+
+      <div class="row">
+        <div>
+          <label for="county">County</label>
+          <select id="county" name="county" required>
+            <option value="">Select a county</option>
+            <option>Alexander</option>
+            <option>Ashe</option>
+            <option>Avery</option>
+            <option>Buncombe</option>
+            <option>Burke</option>
+            <option>Cabarrus</option>
+            <option>Caldwell</option>
+            <option>Catawba</option>
+            <option>Cherokee</option>
+            <option>Clay</option>
+            <option>Cleveland</option>
+            <option>Eastern Band of Cherokee Indian</option>
+            <option>Gaston</option>
+            <option>Graham</option>
+            <option>Haywood</option>
+            <option>Henderson</option>
+            <option>Iredell</option>
+            <option>Jackson</option>
+            <option>Lincoln</option>
+            <option>Macon</option>
+            <option>Madison</option>
+            <option>McDowell</option>
+            <option>Mecklenburg</option>
+            <option>Mitchell</option>
+            <option>Polk</option>
+            <option>Rowan</option>
+            <option>Rutherford</option>
+            <option>Surry</option>
+            <option>Swain</option>
+            <option>Transylvania</option>
+            <option>Union</option>
+            <option>Watauga</option>
+            <option>Wilkes</option>
+            <option>Yadkin</option>
+            <option>Yancey</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="email">Contact Email</label>
+          <input id="email" name="email" type="email" placeholder="name@company.com" required />
+        </div>
+      </div>
+
+      <label for="siteid">Site ID + Address</label>
+      <input id="siteid" name="siteid" type="text" placeholder="011-01-ec461 100 Windago Rd, Weaverville, NC" required />
+
+      <div class="row">
+        <div>
+          <label for="phase">Project Phase</label>
+          <select id="phase" name="phase" required>
+            <option value="">Select a phase</option>
+            <option>Preconstruction</option>
+            <option>Construction</option>
+            <option>Property Owner Information</option>
+          </select>
+        </div>
+        <div>
+          <label for="subphase">Sub Phase</label>
+          <select id="subphase" name="subphase" required>
+            <option value="">Select a sub phase</option>
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Upload Documents</legend>
+      <label for="files">Upload your documents (you can select multiple)</label>
+      <input id="files" name="files" type="file" multiple required />
+      <p class="note">Accepted files will be attached to your submission.</p>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit">Submit</button>
+    </div>
+  </form>
+
+  <script>
+
+    const SUBPHASES = {
+      "Construction": [
+        "As-Built Drawings","Asphalt","Concrete","Contract Documents","Correspondence",
+        "Daily Diaries","Geotechnical","MRR","Pay Application","Photos","Stone Tickets","Working Drawings"
+      ],
+      "Preconstruction": [
+        "30 Percent Plans","90 Percent Plans","100 Percent Plans","Weekly Progress Reports","Utilities","Permitting"
+      ],
+      "Property Owner Information": [
+        "Agreements","Documentation"
+      ]
+    };
+    const phaseSel = document.getElementById('phase');
+    const subSel = document.getElementById('subphase');
+    phaseSel.addEventListener('change', () => {
+      subSel.innerHTML = '<option value="">Select a sub phase</option>';
+      const p = phaseSel.value;
+      if (SUBPHASES[p]) {
+        SUBPHASES[p].forEach(s => {
+          const opt = document.createElement('option');
+          opt.textContent = s;
+          subSel.appendChild(opt);
+        });
+      }
+    });
+
+    const LOOKUP_URL = '/sites/DPSNCEMPRB/SiteAssets/site-lookup.json';
+    const countySel = document.getElementById('county');
+    const siteInput = document.getElementById('siteid');
+    const taWrap = document.createElement('div');
+    taWrap.className = 'typeahead';
+    siteInput.parentNode.insertBefore(taWrap, siteInput);
+    taWrap.appendChild(siteInput);
+    const listEl = document.createElement('div');
+    listEl.className = 'typeahead-list';
+    listEl.style.display = 'none';
+    taWrap.appendChild(listEl);
+    let allRows = [];
+    let countyRows = [];
+
+    function normalize(s) {
+      return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+    function renderSuggestions(items) {
+      listEl.innerHTML = '';
+      if (!items.length) { listEl.style.display = 'none'; return; }
+      items.slice(0, 10).forEach(row => {
+        const div = document.createElement('div');
+        div.className = 'typeahead-item';
+        div.textContent = row.sharepoint_folder;
+        div.onclick = () => {
+          siteInput.value = row.sharepoint_folder;
+          listEl.style.display = 'none';
+        };
+        listEl.appendChild(div);
+      });
+      listEl.style.display = 'block';
+    }
+    function updateSuggestions() {
+      const q = normalize(siteInput.value);
+      if (!q || !countyRows.length) { renderSuggestions([]); return; }
+      const matches = countyRows.filter(r => normalize(r.sharepoint_folder).includes(q));
+      renderSuggestions(matches);
+    }
+    function debounce(fn, ms) {
+      let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    countySel.addEventListener('change', () => {
+      const county = countySel.value;
+      listEl.style.display = 'none';
+      countyRows = allRows.filter(r => r.origin_county === county);
+      siteInput.value = '';
+    });
+    siteInput.addEventListener('input', debounce(updateSuggestions, 120));
+    document.addEventListener('click', (e) => {
+      if (!taWrap.contains(e.target)) listEl.style.display = 'none';
+    });
+
+    async function loadLookup() {
+      try {
+        const res = await fetch(LOOKUP_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Lookup download failed');
+        allRows = await res.json();
+        allRows = (allRows || []).map(x => ({
+          origin_county: x.origin_county,
+          sharepoint_folder: x.sharepoint_folder
+        }));
+        if (countySel.value) {
+          countyRows = allRows.filter(r => r.origin_county === countySel.value);
+        }
+      } catch (e) {
+        console.error('Failed to load site lookup', e);
+      }
+    }
+    loadLookup();
+  </script>
+</body>
+</html>
