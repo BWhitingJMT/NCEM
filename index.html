@@ -213,72 +213,63 @@
     }
     loadLookup();
 
-    const FLOW_URL = 'https://prod-38.usgovtexas.logic.azure.us:443/workflows/303315253e444118995fb1bd0f6a5e28/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=7IKgtEf92we5GFKDriofB3nwyunG4-BXDmweNj4_W1k';
-    const form      = document.getElementById('ncemForm');
-    const statusEl  = document.getElementById('statusText');
-    const submitBtn = document.getElementById('submitBtn');
+ const FLOW_URL = 'YOUR_FLOW_URL';
+  const form = document.getElementById('ncemForm');
+  const statusEl = document.getElementById('statusText');
+  const submitBtn = document.getElementById('submitBtn');
 
-    function setSubmitting(on) {
-      if (on) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Submitting…';
-        statusEl.textContent = 'Uploading files and sending your submission…';
-      } else {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit';
-        statusEl.textContent = '';
-      }
-    }
+  function setSubmitting(on){
+    submitBtn.disabled = on;
+    submitBtn.innerHTML = on ? 'Submitting…' : 'Submit';
+  }
 
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => {
-          const base64 = (r.result || '').toString().split(',')[1] || '';
-          resolve({ name: file.name, type: file.type || '', content: base64 });
-        };
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-    }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    statusEl.textContent = 'Uploading…';
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      setSubmitting(true);
-      try {
-        const meta = {
-          county:     document.getElementById('county').value,
-          email:      document.getElementById('email').value,
-          siteid:     document.getElementById('siteid').value,
-          phase:      document.getElementById('phase').value,
-          subphase:   document.getElementById('subphase').value,
-          designTeam: document.getElementById('design_team').value
-        };
+    try {
+      // build meta
+      const meta = {
+        county: document.getElementById('county').value,
+        email: document.getElementById('email').value,
+        siteid: document.getElementById('siteid').value,
+        phase: document.getElementById('phase').value,
+        subphase: document.getElementById('subphase').value,
+        designTeam: document.getElementById('design_team').value
+      };
 
-        const filesInput = document.getElementById('files');
-        const files = await Promise.all([...filesInput.files].map(fileToBase64));
-
-        const resp = await fetch(FLOW_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ meta, files })
+      const fInput = document.getElementById('files');
+      const files = [];
+      for (const f of fInput.files) {
+        const b64 = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result.split(',')[1]);
+          r.onerror = rej;
+          r.readAsDataURL(f);
         });
-
-        if (!resp.ok) {
-          const text = await resp.text().catch(()=> '');
-          throw new Error(text || 'Submission failed.');
-        }
-
-        alert('Submitted! You should receive a confirmation email shortly.');
-        form.reset();
-        countyRows = [];
-      } catch (err) {
-        console.error(err);
-        alert('There was a problem submitting the form. Please try again or contact support.');
-      } finally {
-        setSubmitting(false);
+        files.push({ name: f.name, type: f.type || 'application/octet-stream', content: b64 });
       }
-    });
+
+      // POST JSON
+      const resp = await fetch(FLOW_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meta, files })
+      });
+
+      if (!resp.ok) throw new Error(await resp.text());
+      alert('Submitted! You should receive a confirmation email shortly.');
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      alert('There was a problem submitting the form.');
+    } finally {
+      setSubmitting(false);
+      statusEl.textContent = '';
+    }
+  });
   </script>
 </body>
 </html>
+
