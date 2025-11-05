@@ -33,14 +33,29 @@
       animation: spin 0.8s linear infinite;
     }
 .toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
-  min-width: 320px; max-width: 90vw; padding: 12px 16px; border-radius: 8px;
-  background: #0f5132; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
-  font-weight: 600; z-index: 9999;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #0f5132;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  font-weight: 600;
+  z-index: 9999;
 }
+
 .toast.error { background:#842029; }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width:700px){ .row { grid-template-columns: 1fr; } }
@@ -294,6 +309,7 @@ showToast('There was a problem submitting the form. Please try again or contact 
   </script>
 </body>
 </html>
+
 
 
 
